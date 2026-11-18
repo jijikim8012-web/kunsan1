@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나의 목표 만다라트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        /* 로딩 스피너 애니메이션 */
+        .loader {
+            border: 4px solid #e2e8f0;
+            border-bottom-color: #6366f1;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 만다라트 공통 스타일 */
+        .mandalart-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0.25rem;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            background-color: rgba(255, 255, 255, 0.9);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .mandalart-cell.core {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #1e3a8a;
+            background-color: #ffffff;
+            box-shadow: inset 0 0 0 2px #3b82f6;
+        }
+
+        .mandalart-cell.sub {
+            font-weight: 700;
+            color: #374151;
+            background-color: rgba(255,255,255,0.95);
+        }
+        
+        /* 편집 가능한 텍스트 스타일링 */
+        [contenteditable="true"] {
+            outline: none;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: text;
+            border-radius: 0.25rem;
+            min-height: 3em;
+        }
+        [contenteditable="true"]:focus {
+            background-color: #fff;
+            box-shadow: inset 0 0 0 2px #818cf8;
+            z-index: 10;
+        }
+        
+        /* 블록별 파스텔톤 색상 테마 (테두리 및 배경) */
+        .block-bg-0 { background-color: #fca5a5; } /* Red */
+        .block-bg-1 { background-color: #fdba74; } /* Orange */
+        .block-bg-2 { background-color: #fde047; } /* Yellow */
+        .block-bg-3 { background-color: #86efac; } /* Green */
+        .block-bg-4 { background-color: #93c5fd; } /* Center (Blue) */
+        .block-bg-5 { background-color: #67e8f9; } /* Cyan */
+        .block-bg-6 { background-color: #a5b4fc; } /* Indigo */
+        .block-bg-7 { background-color: #d8b4fe; } /* Purple */
+        .block-bg-8 { background-color: #f9a8d4; } /* Pink */
+
+        /* 데스크탑 그리드 컨테이너 */
+        .grid-container {
+            aspect-ratio: 1/1;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #475569;
+        }
+
+        /* 반응형: 모바일에서는 클릭 힌트 표시 */
+        @media (max-width: 768px) {
+            .mandalart-cell {
+                font-size: 0.65rem; /* 모바일에서 전체 보기 시 글씨 작게 */
+                padding: 0.1rem;
+            }
+            .mandalart-cell.core { font-size: 0.75rem; }
+            
+            .block-wrapper {
+                cursor: zoom-in;
+                position: relative;
+            }
+            .block-wrapper::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background-color: transparent;
+                z-index: 5;
+            }
+            .block-wrapper.center-block::after {
+                display: none;
+            }
+        }
+
+        /* 인쇄용 스타일 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #resultSection, #resultSection * {
+                visibility: visible;
+            }
+            #resultSection {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            .print-hide {
+                display: none !important;
+            }
+            /* 배경색 인쇄 강제 적용 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .grid-container {
+                max-width: 100%;
+                aspect-ratio: 1/1;
+                border: 2px solid #000;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 flex flex-col">
+
+    <main class="w-full max-w-5xl mx-auto bg-white sm:rounded-2xl sm:shadow-xl overflow-hidden transition-all duration-300 sm:my-8 flex-grow flex flex-col">
+        <!-- 헤더 -->
+        <header class="bg-indigo-600 text-white p-6 text-center print-hide">
+            <h1 class="text-2xl sm:text-3xl font-bold mb-2">✨ 나의 목표 만다라트</h1>
+            <p class="text-indigo-100 text-sm sm:text-base">하나의 핵심 목표를 64개의 구체적인 실천 방법으로 쪼개어 보세요!</p>
+        </header>
+
+        <!-- 입력 화면 -->
+        <section id="inputSection" class="p-6 sm:p-8 print-hide">
+            <form id="goalForm" class="space-y-6">
+                <div>
+                    <label for="coreGoal" class="block text-sm font-semibold text-gray-700 mb-1">핵심 목표 (필수) <span class="text-red-500">*</span></label>
+                    <textarea id="coreGoal" required rows="2" placeholder="예: 영어로 자연스럽게 대화하기, 나만의 포트폴리오 완성하기, 꾸준한 운동 습관 만들기" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none text-base transition"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="timeframe" class="block text-sm font-semibold text-gray-700 mb-1">목표 기간 (선택)</label>
+                        <input type="text" id="timeframe" placeholder="예: 이번 학기 동안, 여름방학 두 달간" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm transition">
+                    </div>
+                    <div>
+                        <label for="weeklyTime" class="block text-sm font-semibold text-gray-700 mb-1">일주일 투자 가능 시간 (선택)</label>
+                        <input type="text" id="weeklyTime" placeholder="예: 평일 저녁 1시간씩, 주말 4시간" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="currentLevel" class="block text-sm font-semibold text-gray-700 mb-1">현재 상황 및 경험 (선택)</label>
+                    <textarea id="currentLevel" rows="2" placeholder="예: 토익 점수는 있지만 말하기는 처음, 전공 수업만 들은 상태" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none text-sm transition"></textarea>
+                </div>
+
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-2 text-sm text-blue-800">
+                    💡 <b>Tip:</b> 상황과 시간을 구체적으로 적어주시면, AI가 학생 신분에 맞는 더 현실적인 계획을 만들어 드립니다.
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 mt-6">
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-md transition-colors text-lg">
+                        새로운 만다라트 만들기 🪄
+                    </button>
+                    <button type="button" id="loadBtn" class="hidden sm:w-1/3 bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold py-3.5 px-4 rounded-lg transition-colors text-base">
+                        저장된 계획 불러오기
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 로딩 화면 -->
+        <section id="loadingSection" class="hidden p-16 flex-grow flex-col items-center justify-center space-y-6 print-hide">
+            <div class="loader mx-auto"></div>
+            <div class="text-center">
+                <p class="text-lg font-bold text-gray-800 mb-2">AI가 만다라트 계획표를 작성 중입니다...</p>
+                <p class="text-gray-500 text-sm animate-pulse">핵심 목표 1개 ➔ 하위 목표 8개 ➔ 세부 실천 방법 64개를 고민하고 있어요.</p>
+            </div>
+        </section>
+
+        <!-- 에러 메시지 컨테이너 -->
+        <section id="errorSection" class="hidden p-6 print-hide">
+            <div id="errorContainer" class="bg-red-50 text-red-600 p-6 rounded-lg border border-red-200">
+                <!-- 동적 에러 메시지 -->
+            </div>
+            <button onclick="showSection('input')" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded transition">돌아가기</button>
+        </section>
+
+        <!-- 결과 화면 -->
+        <section id="resultSection" class="hidden p-2 sm:p-6 flex-grow flex flex-col">
+            <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 print-hide px-2">
+                <p class="text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-2 rounded-lg inline-flex items-center gap-2">
+                    <span>✏️ 각 칸을 클릭하여 내용을 자유롭게 수정할 수 있습니다. (자동 저장)</span>
+                </p>
+                <p class="text-xs font-bold text-pink-600 bg-pink-50 px-3 py-2 rounded-lg sm:hidden flex items-center gap-2">
+                    <span>🔍 3x3 표를 터치하면 확대하여 수정할 수 있습니다.</span>
+                </p>
+            </div>
+            
+            <!-- AI 생성 결과 만다라트 컨테이너 (9x9 Grid) -->
+            <div class="w-full overflow-hidden p-1 bg-white rounded-xl shadow-inner sm:border sm:border-gray-200 print:shadow-none print:border-none print:p-0">
+                <!-- 3x3 Blocks Container -->
+                <div id="mandalartMainGrid" class="grid-container grid grid-cols-3 gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded">
+                    <!-- 자바스크립트로 9개의 블록(각각 3x3)이 렌더링됩니다. -->
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col sm:flex-row gap-3 print-hide px-2">
+                <button id="printBtn" class="flex-1 bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    인쇄 및 PDF로 저장
+                </button>
+                <button id="restartBtn" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    새로운 목표로 시작하기
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 모바일 줌 모달 -->
+    <div id="zoomModal" class="fixed inset-0 bg-gray-900/95 hidden z-50 flex flex-col p-4 print-hide opacity-0 transition-opacity duration-300">
+        <div class="flex justify-between items-center mb-4 mt-8">
+            <h2 class="text-white font-bold text-lg">상세 수정하기</h2>
+            <button id="closeZoomBtn" class="text-white bg-gray-700 hover:bg-gray-600 rounded-full p-2 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <p class="text-gray-300 text-sm mb-4">내용을 수정하면 자동으로 저장됩니다.</p>
+        <div class="flex-grow flex items-center justify-center max-w-md w-full mx-auto">
+            <div id="zoomModalContent" class="w-full aspect-square rounded-xl overflow-hidden shadow-2xl bg-gray-400 p-1.5 border-4 border-gray-600">
+                <!-- 줌된 3x3 블록이 여기에 복사됨 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 저장 완료 토스트 알림 -->
+    <div id="toastMessage" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none z-50 text-sm">
+        저장되었습니다.
+    </div>
+
+    <script>
+        const apiKey = ""; // API 키는 Canvas 환경에서 자동으로 주입됩니다.
+
+        const DOM = {
+            inputSection: document.getElementById('inputSection'),
+            loadingSection: document.getElementById('loadingSection'),
+            resultSection: document.getElementById('resultSection'),
+            errorSection: document.getElementById('errorSection'),
+            goalForm: document.getElementById('goalForm'),
+            errorContainer: document.getElementById('errorContainer'),
+            mandalartMainGrid: document.getElementById('mandalartMainGrid'),
+            printBtn: document.getElementById('printBtn'),
+            restartBtn: document.getElementById('restartBtn'),
+            loadBtn: document.getElementById('loadBtn'),
+            toastMessage: document.getElementById('toastMessage'),
+            zoomModal: document.getElementById('zoomModal'),
+            zoomModalContent: document.getElementById('zoomModalContent'),
+            closeZoomBtn: document.getElementById('closeZoomBtn')
+        };
+
+        // 데이터 상태 관리
+        let appData = {
+            coreGoal: "",
+            subGoals: [] // 8개의 객체: { title: "", actions: ["", ..., ""] } (8 actions)
+        };
+
+        // 매핑 테이블
+        // Center Block(4)의 주변 8칸 -> Subgoals (0~7)
+        const cellToSubgoalIdx = {0:0, 1:1, 2:2, 3:3, 5:4, 6:5, 7:6, 8:7}; 
+        const blockToSubgoalIdx = {0:0, 1:1, 2:2, 3:3, 5:4, 6:5, 7:6, 8:7};
+        const subgoalIdxToBlock = {0:0, 1:1, 2:2, 3:3, 4:5, 5:6, 6:7, 7:8};
+        const subgoalIdxToCellInCenter = {0:0, 1:1, 2:2, 3:3, 4:5, 5:6, 6:7, 7:8};
+        // Outer Block의 주변 8칸 -> Actions (0~7)
+        const cellToActionIdx = {0:0, 1:1, 2:2, 3:3, 5:4, 6:5, 7:6, 8:7};
+
+        // 초기화
+        function init() {
+            if (localStorage.getItem('mandalartData')) {
+                DOM.loadBtn.classList.remove('hidden');
+            }
+        }
+        init();
+
+        DOM.loadBtn.addEventListener('click', () => {
+            const savedData = localStorage.getItem('mandalartData');
+            if (savedData) {
+                appData = JSON.parse(savedData);
+                renderMainGrid();
+                showSection('result');
+            }
+        });
+
+        // 섹션 전환
+        function showSection(sectionName) {
+            DOM.inputSection.classList.add('hidden');
+            DOM.loadingSection.classList.add('hidden');
+            DOM.resultSection.classList.add('hidden');
+            DOM.errorSection.classList.add('hidden');
+            
+            if (sectionName === 'input') DOM.inputSection.classList.remove('hidden');
+            if (sectionName === 'loading') DOM.loadingSection.classList.remove('hidden');
+            if (sectionName === 'result') DOM.resultSection.classList.remove('hidden');
+            if (sectionName === 'error') DOM.errorSection.classList.remove('hidden');
+        }
+
+        // 토스트 메시지
+        let toastTimeout;
+        function showToast(message) {
+            DOM.toastMessage.textContent = message;
+            DOM.toastMessage.classList.remove('opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                DOM.toastMessage.classList.add('opacity-0');
+            }, 1500);
+        }
+
+        // 폼 제출 (AI 생성 요청)
+        DOM.goalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (localStorage.getItem('mandalartData')) {
+                const confirmed = confirm("저장된 기존 만다라트 계획이 있습니다. 새로 만들면 기존 데이터가 지워집니다. 진행하시겠습니까?");
+                if (!confirmed) return;
+            }
+
+            const goal = document.getElementById('coreGoal').value.trim();
+            const timeframe = document.getElementById('timeframe').value.trim() || '미입력 (제안 요망)';
+            const currentLevel = document.getElementById('currentLevel').value.trim() || '미입력 (제안 요망)';
+            const weeklyTime = document.getElementById('weeklyTime').value.trim() || '미입력 (제안 요망)';
+
+            showSection('loading');
+
+            const userPrompt = `
+                핵심 목표: ${goal}
+                목표 기간: ${timeframe}
+                현재 상황/경험: ${currentLevel}
+                일주일 투자 가능 시간: ${weeklyTime}
+            `;
+
+            const systemPrompt = `당신은 만다라트 계획표 작성 AI입니다. 사용자의 목표를 바탕으로 8개의 하위 목표와 각각 8개의 구체적인 실천 방법을 작성하세요. 미입력 정보는 적절히 제안하되 '(제안)'이라고 표시하세요. 미리 정해둔 예시 데이터가 아닌 실제 사용자 맞춤형 계획을 세워주세요.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "coreGoal": { type: "STRING" },
+                            "subGoals": {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        "title": { type: "STRING" },
+                                        "actions": {
+                                            type: "ARRAY",
+                                            items: { type: "STRING" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API 호출 실패 (${response.status})`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts) {
+                    const jsonText = result.candidates[0].content.parts[0].text;
+                    const parsedData = JSON.parse(jsonText);
+                    
+                    // 유효성 검증 및 기본값 처리
+                    if(!parsedData.coreGoal) parsedData.coreGoal = goal;
+                    if(!parsedData.subGoals || parsedData.subGoals.length < 8) {
+                         throw new Error("AI가 하위 목표를 8개 생성하지 못했습니다.");
+                    }
+                    parsedData.subGoals = parsedData.subGoals.slice(0, 8);
+                    parsedData.subGoals.forEach(sg => {
+                        if(!sg.actions || sg.actions.length < 8) {
+                            sg.actions = [...(sg.actions||[]), ...Array(8).fill("내용 추가")].slice(0, 8);
+                        } else {
+                            sg.actions = sg.actions.slice(0, 8);
+                        }
+                    });
+
+                    appData = parsedData;
+                    saveData();
+                    renderMainGrid();
+                    showSection('result');
+                } else {
+                    throw new Error("AI 응답 형식이 올바르지 않습니다.");
+                }
+
+            } catch (error) {
+                console.error("API Error:", error);
+                DOM.errorContainer.innerHTML = `
+                    <p class="font-bold mb-2">⚠️ AI 기능에 연결할 수 없거나 오류가 발생했습니다.</p>
+                    <p class="text-sm">사유: ${error.message}</p>
+                    <p class="text-sm mt-2">API 키 설정이 올바른지, 네트워크가 정상인지 확인해주세요.</p>
+                `;
+                showSection('error');
+            }
+        });
+
+        function saveData() {
+            localStorage.setItem('mandalartData', JSON.stringify(appData));
+        }
+
+        // 그리드 렌더링 로직
+        function renderMainGrid() {
+            DOM.mandalartMainGrid.innerHTML = '';
+            
+            for (let blockIdx = 0; blockIdx < 9; blockIdx++) {
+                const blockWrapper = document.createElement('div');
+                blockWrapper.className = `block-wrapper block-bg-${blockIdx} grid grid-cols-3 gap-[1px] p-[1px] sm:gap-[2px] sm:p-[2px] rounded h-full w-full ${blockIdx === 4 ? 'center-block' : ''}`;
+                blockWrapper.dataset.blockIndex = blockIdx;
+
+                for (let cellIdx = 0; cellIdx < 9; cellIdx++) {
+                    const cell = document.createElement('div');
+                    
+                    // 스타일 설정
+                    let cellClass = 'mandalart-cell rounded-sm w-full h-full';
+                    if (blockIdx === 4 && cellIdx === 4) {
+                        cellClass += ' core'; // 정중앙
+                    } else if (blockIdx === 4 || cellIdx === 4) {
+                        cellClass += ' sub'; // 하위 목표들
+                    }
+                    cell.className = cellClass;
+                    
+                    // 데이터 매핑 및 DOM 생성
+                    const editableDiv = document.createElement('div');
+                    editableDiv.contentEditable = true;
+                    editableDiv.dataset.blockIndex = blockIdx;
+                    editableDiv.dataset.cellIndex = cellIdx;
+                    
+                    editableDiv.innerHTML = getCellValue(blockIdx, cellIdx);
+                    
+                    // 입력 이벤트 (양방향 바인딩 및 저장)
+                    editableDiv.addEventListener('input', handleCellInput);
+                    editableDiv.addEventListener('blur', () => { saveData(); showToast('수정됨'); });
+
+                    // 모바일에서 편집 제어를 위한 z-index 처리
+                    editableDiv.addEventListener('focus', (e) => {
+                         if (window.innerWidth <= 768 && blockIdx !== 4 && !DOM.zoomModal.classList.contains('active-modal')) {
+                             e.target.blur();
+                             openZoomModal(blockIdx);
+                         }
+                    });
+
+                    cell.appendChild(editableDiv);
+                    blockWrapper.appendChild(cell);
+                }
+                
+                // 모바일 터치 이벤트 (모달 띄우기)
+                if (blockIdx !== 4) { // 중앙 블록은 그대로 둠
+                    blockWrapper.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 768) {
+                            openZoomModal(blockIdx);
+                        }
+                    });
+                }
+
+                DOM.mandalartMainGrid.appendChild(blockWrapper);
+            }
+        }
+
+        // 특정 셀의 값을 데이터 모델에서 가져옴
+        function getCellValue(blockIdx, cellIdx) {
+            if (blockIdx === 4) {
+                if (cellIdx === 4) return appData.coreGoal;
+                const sgIdx = cellToSubgoalIdx[cellIdx];
+                return appData.subGoals[sgIdx]?.title || '';
+            } else {
+                const sgIdx = blockToSubgoalIdx[blockIdx];
+                if (cellIdx === 4) return appData.subGoals[sgIdx]?.title || '';
+                const acIdx = cellToActionIdx[cellIdx];
+                return appData.subGoals[sgIdx]?.actions[acIdx] || '';
+            }
+        }
+
+        // 입력 값 데이터 모델 업데이트 및 동기화 (가운데 표 <-> 주변 표)
+        function handleCellInput(e) {
+            const el = e.target;
+            const blockIdx = parseInt(el.dataset.blockIndex);
+            const cellIdx = parseInt(el.dataset.cellIndex);
+            const newValue = el.innerHTML;
+
+            if (blockIdx === 4) {
+                if (cellIdx === 4) {
+                    appData.coreGoal = newValue;
+                } else {
+                    const sgIdx = cellToSubgoalIdx[cellIdx];
+                    if (appData.subGoals[sgIdx]) {
+                        appData.subGoals[sgIdx].title = newValue;
+                        const targetBlockIdx = subgoalIdxToBlock[sgIdx];
+                        syncDOMCell(targetBlockIdx, 4, newValue);
+                    }
+                }
+            } else {
+                const sgIdx = blockToSubgoalIdx[blockIdx];
+                if (cellIdx === 4) {
+                    if (appData.subGoals[sgIdx]) {
+                        appData.subGoals[sgIdx].title = newValue;
+                        const targetCellIdx = subgoalIdxToCellInCenter[sgIdx];
+                        syncDOMCell(4, targetCellIdx, newValue);
+                    }
+                } else {
+                    const acIdx = cellToActionIdx[cellIdx];
+                    if (appData.subGoals[sgIdx] && appData.subGoals[sgIdx].actions) {
+                        appData.subGoals[sgIdx].actions[acIdx] = newValue;
+                    }
+                }
+            }
+        }
+
+        // DOM만 부분 업데이트하는 함수
+        function syncDOMCell(blockIdx, cellIdx, value) {
+            const selector = `div[contenteditable="true"][data-block-index="${blockIdx}"][data-cell-index="${cellIdx}"]`;
+            const targetEl = DOM.mandalartMainGrid.querySelector(selector);
+            if (targetEl && targetEl.innerHTML !== value) {
+                targetEl.innerHTML = value;
+            }
+            if (DOM.zoomModalContent.children.length > 0) {
+                 const modalTargetEl = DOM.zoomModalContent.querySelector(selector);
+                 if (modalTargetEl && modalTargetEl.innerHTML !== value) {
+                     modalTargetEl.innerHTML = value;
+                 }
+            }
+        }
+
+        /* --- 모바일 줌 모달 기능 --- */
+        let currentZoomedBlockIdx = null;
+
+        function openZoomModal(blockIdx) {
+            currentZoomedBlockIdx = blockIdx;
+            
+            const originalBlock = DOM.mandalartMainGrid.children[blockIdx];
+            const cloneBlock = originalBlock.cloneNode(true);
+            
+            cloneBlock.className = `grid grid-cols-3 gap-1 p-1 rounded-lg h-full w-full block-bg-${blockIdx}`;
+            
+            const editables = cloneBlock.querySelectorAll('div[contenteditable="true"]');
+            editables.forEach(el => {
+                el.style.fontSize = "1rem";
+                if(el.parentElement.classList.contains('core') || el.parentElement.classList.contains('sub')) {
+                    el.style.fontSize = "1.1rem";
+                }
+
+                el.addEventListener('input', (e) => {
+                    handleCellInput(e);
+                });
+                el.addEventListener('blur', () => { saveData(); });
+            });
+
+            DOM.zoomModalContent.innerHTML = '';
+            DOM.zoomModalContent.appendChild(cloneBlock);
+            
+            DOM.zoomModal.classList.remove('hidden');
+            DOM.zoomModal.classList.add('active-modal');
+            setTimeout(() => {
+                DOM.zoomModal.classList.remove('opacity-0');
+            }, 10);
+        }
+
+        function closeZoomModal() {
+            DOM.zoomModal.classList.add('opacity-0');
+            setTimeout(() => {
+                DOM.zoomModal.classList.add('hidden');
+                DOM.zoomModal.classList.remove('active-modal');
+                DOM.zoomModalContent.innerHTML = '';
+                currentZoomedBlockIdx = null;
+                showToast('저장되었습니다.');
+            }, 300);
+        }
+
+        DOM.closeZoomBtn.addEventListener('click', closeZoomModal);
+        
+        DOM.zoomModal.addEventListener('click', (e) => {
+            if (e.target === DOM.zoomModal || e.target.parentElement === DOM.zoomModal) {
+                closeZoomModal();
+            }
+        });
+
+        /* --- 추가 기능 --- */
+        DOM.printBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        DOM.restartBtn.addEventListener('click', () => {
+            const confirmed = confirm("새로운 목표로 다시 시작하시겠습니까? 현재 작성된 계획은 지워집니다.");
+            if (confirmed) {
+                localStorage.removeItem('mandalartData');
+                appData = { coreGoal: "", subGoals: [] };
+                DOM.goalForm.reset();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                showSection('input');
+                DOM.loadBtn.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
